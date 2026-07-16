@@ -1,5 +1,8 @@
 # 🏆 StellarRank — Permissionless Game Leaderboard on Stellar (Soroban)
 
+<img width="1917" height="1016" alt="image" src="https://github.com/user-attachments/assets/fd85bc45-66e8-4f29-b317-0e7caa4c263a" />
+
+
 A fully decentralized, permissionless game leaderboard protocol built with **Soroban smart contracts** on the **Stellar blockchain**. No admins. No gatekeepers. Anyone can create a game, submit scores, and climb the ranks — all on-chain.
 
 ---
