@@ -11,7 +11,7 @@ jobs:
     name: Smart Contract — Build & Test
     runs-on: ubuntu-latest
     container:
-      image: rust:1.85-slim
+      image: rust:1.88-slim
 
     steps:
       - uses: actions/checkout@v4
