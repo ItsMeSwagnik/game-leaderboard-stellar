@@ -25,6 +25,7 @@ StellarRank is a Soroban smart contract that lets game developers and communitie
 - When a leaderboard hits `max_entries`, the **worst-ranked player is automatically dropped** to make room
 - Anyone can **query the full ranked leaderboard** or look up a specific player's rank and score
 - All data is stored on-chain using Soroban **persistent storage** with TTL management
+- The **RewardOracle** contract tracks all-time champions per leaderboard via **inter-contract calls**
 
 ---
 
@@ -40,17 +41,22 @@ StellarRank is a Soroban smart contract that lets game developers and communitie
 | 🔍 Public Queries | `get_leaderboard` and `get_player_rank` are open read functions |
 | ⏱️ TTL Management | Persistent storage TTLs are extended on every write to prevent archival |
 | 🔁 Dual Scoring Modes | `HighestWins` (e.g. arcade scores) and `LowestWins` (e.g. speedruns) |
+| 🔗 Inter-Contract Calls | `submit_score_with_oracle` calls the RewardOracle contract cross-contract to track all-time champions |
+| 📡 On-Chain Events | `lb_create`, `score_sub`, and `new_champ` events emitted for real-time streaming |
 
 ---
 
 ## 📂 Contract Structure
 
 ```
-contracts/contract/src/
-├── lib.rs       # Main contract logic
-└── test.rs      # Unit tests
+contracts/
+├── contract/src/
+│   ├── lib.rs          # Main leaderboard contract
+│   └── test.rs         # Unit + inter-contract tests (11 tests)
+├── reward_oracle/src/
+│   └── lib.rs          # RewardOracle contract (inter-contract target)
 frontend/
-├── app/         # React + Vite frontend
+├── app/                # React + Vite frontend
 └── packages/
     └── game_leaderboard/   # Auto-generated Stellar contract bindings
 ```
@@ -84,6 +90,13 @@ struct RankedEntry {
     player: Address,
     score: u64,
 }
+
+// RewardOracle — all-time champion per leaderboard
+struct ChampionRecord {
+    player: Address,
+    score: u64,
+    leaderboard_id: u64,
+}
 ```
 
 ---
@@ -95,6 +108,9 @@ Creates a new leaderboard and returns its ID. No approval needed.
 
 ### `submit_score(leaderboard_id, player, score)`
 Submits or updates a player's score. Automatically re-ranks all entries. Drops the worst entry if the board is full.
+
+### `submit_score_with_oracle(leaderboard_id, player, score, oracle_id) → bool`
+Submits a score **and** makes a **cross-contract call** to the deployed `RewardOracle` contract at `oracle_id`. Returns `true` if the player became the new all-time champion. This is the inter-contract communication entry point.
 
 ### `get_leaderboard(leaderboard_id) → Vec<RankedEntry>`
 Returns all entries sorted by rank (best first).
@@ -108,6 +124,31 @@ Returns all entries sorted by rank (best first).
 
 ### `get_player_rank(leaderboard_id, player) → RankedEntry`
 Returns a specific player's current rank and score.
+
+### RewardOracle: `record_champion(leaderboard_id, player, score, highest_wins) → bool`
+Called cross-contract by the leaderboard. Updates the all-time champion if the new score beats the current best. Emits a `new_champ` event.
+
+### RewardOracle: `get_champion(leaderboard_id) → Option<ChampionRecord>`
+Returns the all-time champion for a leaderboard.
+
+---
+
+## 🔗 Inter-Contract Communication
+
+The leaderboard contract calls the RewardOracle contract using Soroban's `env.invoke_contract()` (via the auto-generated `RewardOracleClient`):
+
+```
+User → LeaderboardContract::submit_score_with_oracle()
+              │
+              │  cross-contract call (env.invoke_contract)
+              ▼
+       RewardOracle::record_champion()
+              │
+              └─ updates ChampionRecord in persistent storage
+              └─ emits new_champ event if champion changes
+```
+
+Both contracts are independently deployed. The oracle address is passed at call time, making the system composable — any contract can plug in a different oracle.
 
 ---
 
@@ -147,14 +188,16 @@ cd "Game Leaderboard Stellar"
 npm install
 ```
 
-### 2. Build the Smart Contract
+### 2. Build Both Smart Contracts
 
 ```bash
 cd contracts
 stellar contract build
 ```
 
-Output: `contracts/target/wasm32v1-none/release/contract.wasm`
+Outputs:
+- `contracts/target/wasm32v1-none/release/contract.wasm`
+- `contracts/target/wasm32v1-none/release/reward_oracle.wasm`
 
 ### 3. Deploy to Testnet
 
@@ -162,12 +205,19 @@ Output: `contracts/target/wasm32v1-none/release/contract.wasm`
 # Generate & fund a testnet identity
 stellar keys generate swag --network testnet --fund
 
-# Deploy
+# Deploy leaderboard contract
 stellar contract deploy \
   --wasm contracts/target/wasm32v1-none/release/contract.wasm \
   --source-account swag \
   --network testnet \
   --alias game_leaderboard
+
+# Deploy RewardOracle contract
+stellar contract deploy \
+  --wasm contracts/target/wasm32v1-none/release/reward_oracle.wasm \
+  --source-account swag \
+  --network testnet \
+  --alias reward_oracle
 ```
 
 ### 4. Generate Contract Bindings

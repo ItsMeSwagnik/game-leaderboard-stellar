@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   connectWallet,
   disconnectWallet,
@@ -77,6 +77,9 @@ export default function App() {
 
   const [viewId, setViewId] = useState(0);
   const [rankings, setRankings] = useState<RankedEntry[]>([]);
+  const [livePolling, setLivePolling] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshBalance = useCallback(async (addr: string) => {
     try {
@@ -184,17 +187,37 @@ export default function App() {
   }
 
   // ── View Rankings ─────────────────────────────────────────────────────────
-  async function handleViewRankings() {
+  const fetchRankings = useCallback(async (id: number, silent = false) => {
     try {
-      setStatus("Loading rankings…");
+      if (!silent) setStatus("Loading rankings…");
       const client = getClient();
-      const tx = await client.get_leaderboard({ leaderboard_id: BigInt(viewId) });
+      const tx = await client.get_leaderboard({ leaderboard_id: BigInt(id) });
       setRankings(tx.result as RankedEntry[]);
-      setStatus("");
+      if (!silent) setStatus("");
     } catch (e: any) {
-      setStatus(formatError(e));
+      if (!silent) setStatus(formatError(e));
+    }
+  }, []);
+
+  async function handleViewRankings() {
+    await fetchRankings(viewId);
+  }
+
+  function toggleLivePolling() {
+    if (livePolling) {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = null;
+      setLivePolling(false);
+    } else {
+      fetchRankings(viewId, true);
+      pollingRef.current = setInterval(() => fetchRankings(viewId, true), 5000);
+      setLivePolling(true);
     }
   }
+
+  useEffect(() => {
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  }, []);
 
   const short = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
 
@@ -219,7 +242,16 @@ export default function App() {
         ) : (
           <button className="btn-connect" onClick={handleConnect}>Connect Wallet</button>
         )}
+        <button className="hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
+          <span /><span /><span />
+        </button>
       </nav>
+      <div className={`mobile-menu${menuOpen ? " open" : ""}`}>
+        <a href="#wallet" onClick={() => setMenuOpen(false)}>Wallet</a>
+        <a href="#send" onClick={() => setMenuOpen(false)}>Send XLM</a>
+        <a href="#leaderboards" onClick={() => setMenuOpen(false)}>Leaderboards</a>
+        <a href="#rankings" onClick={() => setMenuOpen(false)}>Rankings</a>
+      </div>
 
       {/* ── Hero ── */}
       <section className="hero">
@@ -324,14 +356,24 @@ export default function App() {
 
       {/* ── View Rankings ── */}
       <section className="card" id="rankings">
-        <h2>🏅 View Rankings</h2>
+        <h2>
+          🏅 View Rankings
+          {livePolling && (
+            <span className="live-badge">
+              <span className="live-dot" /> LIVE
+            </span>
+          )}
+        </h2>
         <div className="row">
           <input
             type="number" value={viewId}
-            onChange={e => setViewId(Number(e.target.value))}
+            onChange={e => { setViewId(Number(e.target.value)); if (livePolling) { if (pollingRef.current) clearInterval(pollingRef.current); setLivePolling(false); } }}
             placeholder="Leaderboard ID"
           />
           <button className="btn-secondary" onClick={handleViewRankings}>Load</button>
+          <button className="btn-secondary" onClick={toggleLivePolling}>
+            {livePolling ? "⏹ Stop" : "▶ Live"}
+          </button>
         </div>
         {rankings.length > 0 && (
           <table>

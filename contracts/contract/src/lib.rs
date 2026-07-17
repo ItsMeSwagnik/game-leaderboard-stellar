@@ -1,5 +1,9 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Vec};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, symbol_short,
+    Address, Env, String, Vec,
+};
+use reward_oracle::RewardOracleClient;
 
 // ── Storage key types ────────────────────────────────────────────────────────
 
@@ -70,7 +74,7 @@ impl LeaderboardContract {
 
         let lb = Leaderboard {
             id,
-            name,
+            name: name.clone(),
             creator,
             scoring_type,
             max_entries,
@@ -87,6 +91,11 @@ impl LeaderboardContract {
             .instance()
             .set(&DataKey::LeaderboardCount, &(id + 1));
         env.storage().instance().extend_ttl(100, 100);
+
+        env.events().publish(
+            (symbol_short!("lb_create"), id),
+            (name.clone(), max_entries),
+        );
 
         id
     }
@@ -141,6 +150,35 @@ impl LeaderboardContract {
         env.storage()
             .persistent()
             .extend_ttl(&DataKey::Scores(leaderboard_id), 100, 100);
+
+        env.events().publish(
+            (symbol_short!("score_sub"), leaderboard_id),
+            score,
+        );
+    }
+
+    /// Submit a score AND notify the RewardOracle contract cross-contract.
+    /// `oracle_id` is the deployed address of the RewardOracle contract.
+    /// Returns true if the player became the new all-time champion.
+    pub fn submit_score_with_oracle(
+        env: Env,
+        leaderboard_id: u64,
+        player: Address,
+        score: u64,
+        oracle_id: Address,
+    ) -> bool {
+        // 1. Write the score into this leaderboard (reuse existing logic).
+        Self::submit_score(env.clone(), leaderboard_id, player.clone(), score);
+
+        // 2. Cross-contract call → RewardOracle.
+        let lb: Leaderboard = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Leaderboard(leaderboard_id))
+            .unwrap();
+        let highest_wins = matches!(lb.scoring_type, ScoringType::HighestWins);
+        let oracle = RewardOracleClient::new(&env, &oracle_id);
+        oracle.record_champion(&leaderboard_id, &player, &score, &highest_wins)
     }
 
     /// Returns the leaderboard sorted by rank (best first).

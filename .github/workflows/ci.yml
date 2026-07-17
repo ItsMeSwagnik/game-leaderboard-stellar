@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  contract:
+    name: Smart Contract — Build & Test
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.82-slim
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: cargo-${{ hashFiles('contracts/Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Add wasm target
+        run: rustup target add wasm32v1-none
+
+      - name: Run contract tests
+        working-directory: contracts
+        run: cargo test -- --test-output immediate
+
+      - name: Build contract (wasm)
+        working-directory: contracts
+        run: cargo build --release --target wasm32v1-none
+
+  frontend:
+    name: Frontend — Build
+    runs-on: ubuntu-latest
+    container:
+      image: node:20-slim
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            frontend/app/node_modules
+            frontend/packages/game_leaderboard/node_modules
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
