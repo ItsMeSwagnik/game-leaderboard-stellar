@@ -11,7 +11,7 @@ jobs:
     name: Smart Contract — Build & Test
     runs-on: ubuntu-latest
     container:
-      image: rust:1.84-slim
+      image: rust:1.88-slim
 
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
 
       - name: Run contract tests
         working-directory: contracts
-        run: cargo test -- --test-output immediate
+        run: cargo test
 
       - name: Build contract (wasm)
         working-directory: contracts
