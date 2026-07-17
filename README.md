@@ -278,7 +278,7 @@ stellar contract invoke \
 
 | Action | Transaction Hash |
 |---|---|
-| `submit_score` on testnet | *(run the app, submit a score, and paste the hash here from the tx badge)* |
+| `submit_score` on testnet | *1dc138055d32788b2f9fc34aba9f701d7a35c30eb1b2e4c88252052ad51f8967* |
 
 Verify any tx at: `https://stellar.expert/explorer/testnet/tx/1dc138055d32788b2f9fc34aba9f701d7a35c30eb1b2e4c88252052ad51f8967`
 

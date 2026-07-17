@@ -31,12 +31,16 @@ if (typeof window !== "undefined") {
 }
 
 
+const _env = (typeof import.meta !== "undefined" && (import.meta as any).env)
+  ? (import.meta as any).env
+  : (typeof process !== "undefined" ? process.env : {});
+
 export const networks = {
   testnet: {
-    networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CDPSYJQYFIVSVEWNGL47ZF5VEEDPMMVHPVLCQZKFTA3VTFKQDGJVELVA",
-  }
-} as const
+    networkPassphrase: _env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015",
+    contractId: _env.VITE_CONTRACT_ID ?? "CDPSYJQYFIVSVEWNGL47ZF5VEEDPMMVHPVLCQZKFTA3VTFKQDGJVELVA",
+  },
+} as const;
 
 export type DataKey = {tag: "LeaderboardCount", values: void} | {tag: "Leaderboard", values: readonly [u64]} | {tag: "Scores", values: readonly [u64]};
 

@@ -1,4 +1,4 @@
-import { Client, networks } from "game_leaderboard";
+import { Client, networks } from "@stellarrank/game_leaderboard";
 import { RPC_URL, NETWORK_PASSPHRASE, sign } from "./wallet";
 
 export function getClient(walletAddress?: string) {

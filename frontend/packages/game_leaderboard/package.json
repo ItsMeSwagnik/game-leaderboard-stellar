@@ -1,6 +1,6 @@
 {
   "version": "0.0.0",
-  "name": "game_leaderboard",
+  "name": "@stellarrank/game_leaderboard",
   "type": "module",
   "exports": "./dist/index.js",
   "typings": "dist/index.d.ts",

@@ -9,7 +9,7 @@ import {
   InsufficientBalanceError,
 } from "./wallet";
 import { getClient } from "./contract";
-import type { RankedEntry, ScoringType } from "game_leaderboard";
+import type { RankedEntry, ScoringType } from "@stellarrank/game_leaderboard";
 import "./App.css";
 
 type TxStatus = "idle" | "pending" | "success" | "fail";

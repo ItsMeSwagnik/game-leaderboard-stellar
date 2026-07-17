@@ -11,9 +11,12 @@ import {
   Asset,
 } from "@stellar/stellar-sdk";
 
-export const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
-export const RPC_URL = "https://soroban-testnet.stellar.org:443";
-const HORIZON_URL = "https://horizon-testnet.stellar.org";
+export const NETWORK_PASSPHRASE =
+  import.meta.env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+export const RPC_URL =
+  import.meta.env.VITE_RPC_URL ?? "https://soroban-testnet.stellar.org:443";
+const HORIZON_URL =
+  import.meta.env.VITE_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
 
 // ── Error types ───────────────────────────────────────────────────────────────
 export class WalletNotFoundError extends Error {
