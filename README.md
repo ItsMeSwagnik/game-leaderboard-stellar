@@ -9,6 +9,8 @@
 
 A fully decentralized, permissionless game leaderboard protocol built with **Soroban smart contracts** on the **Stellar blockchain**. No admins. No gatekeepers. Anyone can create a game, submit scores, and climb the ranks — all on-chain.
 
+🌐 **Live Demo:** [game-leaderboard-stellar-dapp.vercel.app](https://game-leaderboard-stellar-dapp.vercel.app/)
+
 ---
 
 ## 📌 Project Description
@@ -263,6 +265,37 @@ stellar contract invoke \
   --scoring_type '{"HighestWins":{}}' \
   --max_entries 10
 ```
+
+---
+
+## 🌐 Live Demo
+
+| Environment | URL |
+|---|---|
+| Vercel (Production) | [game-leaderboard-stellar-dapp.vercel.app](https://game-leaderboard-stellar-dapp.vercel.app/) |
+
+---
+
+## 🎬 Demo Video
+
+<!-- Add your 1–2 minute demo video link here -->
+> 📹 *Demo video coming soon*
+
+---
+
+## 📸 Screenshots
+
+### Mobile Responsive UI
+<!-- Add mobile screenshot here -->
+> 📱 *Screenshot coming soon*
+
+### CI/CD Pipeline
+<!-- Add CI pipeline screenshot here -->
+> ⚙️ *Screenshot coming soon*
+
+### Contract Tests Passing
+<!-- Add test output screenshot here -->
+> ✅ *Screenshot coming soon*
 
 ---
 
