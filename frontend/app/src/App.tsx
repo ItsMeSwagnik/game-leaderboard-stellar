@@ -1,36 +1,86 @@
 import { useState, useEffect, useCallback } from "react";
-import { connectWallet, disconnectWallet, fetchXLMBalance, sendXLM } from "./wallet";
+import {
+  connectWallet,
+  disconnectWallet,
+  fetchXLMBalance,
+  sendXLM,
+  WalletNotFoundError,
+  WalletRejectedError,
+  InsufficientBalanceError,
+} from "./wallet";
 import { getClient } from "./contract";
 import type { RankedEntry, ScoringType } from "game_leaderboard";
 import "./App.css";
 
+type TxStatus = "idle" | "pending" | "success" | "fail";
+
+function TxBadge({ status, hash }: { status: TxStatus; hash?: string }) {
+  if (status === "idle") return null;
+  const labels: Record<TxStatus, string> = {
+    idle: "",
+    pending: "⏳ Transaction pending…",
+    success: "✅ Transaction confirmed!",
+    fail: "❌ Transaction failed",
+  };
+  return (
+    <div className={`tx-badge tx-badge--${status}`}>
+      {labels[status]}
+      {status === "success" && hash && (
+        <>
+          {" "}
+          Hash:{" "}
+          <a
+            href={`https://stellar.expert/explorer/testnet/tx/${hash}`}
+            target="_blank"
+            rel="noreferrer"
+            className="tx-link"
+          >
+            {hash.slice(0, 12)}…{hash.slice(-8)}
+          </a>
+        </>
+      )}
+    </div>
+  );
+}
+
+function formatError(e: any): string {
+  if (e instanceof WalletNotFoundError) return `🔌 ${e.message}`;
+  if (e instanceof WalletRejectedError) return `🚫 ${e.message}`;
+  if (e instanceof InsufficientBalanceError) return `💸 ${e.message}`;
+  return `❌ ${e?.message ?? "Unknown error"}`;
+}
+
 export default function App() {
   // ── Wallet state ──────────────────────────────────────────────────────────
-  const [wallet, setWallet] = useState<string>("");
-  const [balance, setBalance] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
+  const [wallet, setWallet] = useState("");
+  const [balance, setBalance] = useState("");
+  const [status, setStatus] = useState("");
 
   // ── Send XLM state ────────────────────────────────────────────────────────
   const [sendTo, setSendTo] = useState("");
   const [sendAmount, setSendAmount] = useState("");
-  const [txHash, setTxHash] = useState("");
-  const [txError, setTxError] = useState("");
+  const [sendTxStatus, setSendTxStatus] = useState<TxStatus>("idle");
+  const [sendTxHash, setSendTxHash] = useState("");
 
   // ── Leaderboard state ─────────────────────────────────────────────────────
   const [lbName, setLbName] = useState("Stellar Racer");
   const [scoring, setScoring] = useState<"HighestWins" | "LowestWins">("HighestWins");
   const [maxEntries, setMaxEntries] = useState(10);
   const [createdId, setCreatedId] = useState<number | null>(null);
+  const [createTxStatus, setCreateTxStatus] = useState<TxStatus>("idle");
+  const [createTxHash, setCreateTxHash] = useState("");
+
   const [submitId, setSubmitId] = useState(0);
   const [submitScore, setSubmitScore] = useState(0);
+  const [submitTxStatus, setSubmitTxStatus] = useState<TxStatus>("idle");
+  const [submitTxHash, setSubmitTxHash] = useState("");
+
   const [viewId, setViewId] = useState(0);
   const [rankings, setRankings] = useState<RankedEntry[]>([]);
 
-  // ── Auto-refresh balance when wallet changes ──────────────────────────────
   const refreshBalance = useCallback(async (addr: string) => {
     try {
-      const bal = await fetchXLMBalance(addr);
-      setBalance(bal);
+      setBalance(await fetchXLMBalance(addr));
     } catch {
       setBalance("—");
     }
@@ -44,47 +94,51 @@ export default function App() {
   // ── Wallet handlers ───────────────────────────────────────────────────────
   async function handleConnect() {
     try {
-      setStatus("Connecting...");
+      setStatus("Opening wallet picker…");
       const addr = await connectWallet();
       setWallet(addr);
       setStatus("");
     } catch (e: any) {
-      setStatus(`❌ ${e.message}`);
+      setStatus(formatError(e));
     }
   }
 
-  function handleDisconnect() {
-    disconnectWallet();
+  async function handleDisconnect() {
+    await disconnectWallet();
     setWallet("");
     setBalance("");
     setStatus("");
-    setTxHash("");
-    setTxError("");
+    setSendTxStatus("idle");
+    setSendTxHash("");
+    setCreateTxStatus("idle");
+    setCreateTxHash("");
+    setSubmitTxStatus("idle");
+    setSubmitTxHash("");
     setRankings([]);
   }
 
-  // ── Send XLM handler ──────────────────────────────────────────────────────
+  // ── Send XLM ──────────────────────────────────────────────────────────────
   async function handleSendXLM() {
     if (!wallet) return setStatus("Connect wallet first");
-    setTxHash("");
-    setTxError("");
+    setSendTxStatus("pending");
+    setSendTxHash("");
     try {
-      setStatus("Sending XLM...");
       const hash = await sendXLM(wallet, sendTo, sendAmount);
-      setTxHash(hash);
-      setStatus("");
+      setSendTxHash(hash);
+      setSendTxStatus("success");
       await refreshBalance(wallet);
     } catch (e: any) {
-      setTxError(e.message);
-      setStatus("");
+      setSendTxStatus("fail");
+      setStatus(formatError(e));
     }
   }
 
-  // ── Leaderboard handlers ──────────────────────────────────────────────────
+  // ── Create Leaderboard ────────────────────────────────────────────────────
   async function handleCreate() {
     if (!wallet) return setStatus("Connect wallet first");
+    setCreateTxStatus("pending");
+    setCreateTxHash("");
     try {
-      setStatus("Creating leaderboard...");
       const client = getClient(wallet);
       const scoringType: ScoringType =
         scoring === "HighestWins"
@@ -96,40 +150,49 @@ export default function App() {
         scoring_type: scoringType,
         max_entries: maxEntries,
       });
-      await tx.signAndSend();
+      const result = await tx.signAndSend();
       setCreatedId(Number(tx.result));
-      setStatus(`✅ Leaderboard created! ID: ${tx.result}`);
+      setCreateTxHash((result as any)?.hash ?? "");
+      setCreateTxStatus("success");
+      setStatus("");
     } catch (e: any) {
-      setStatus(`❌ ${e.message}`);
+      setCreateTxStatus("fail");
+      setStatus(formatError(e));
     }
   }
 
+  // ── Submit Score ──────────────────────────────────────────────────────────
   async function handleSubmitScore() {
     if (!wallet) return setStatus("Connect wallet first");
+    setSubmitTxStatus("pending");
+    setSubmitTxHash("");
     try {
-      setStatus("Submitting score...");
       const client = getClient(wallet);
       const tx = await client.submit_score({
         leaderboard_id: BigInt(submitId),
         player: wallet,
         score: BigInt(submitScore),
       });
-      await tx.signAndSend();
-      setStatus("✅ Score submitted!");
+      const result = await tx.signAndSend();
+      setSubmitTxHash((result as any)?.hash ?? "");
+      setSubmitTxStatus("success");
+      setStatus("");
     } catch (e: any) {
-      setStatus(`❌ ${e.message}`);
+      setSubmitTxStatus("fail");
+      setStatus(formatError(e));
     }
   }
 
+  // ── View Rankings ─────────────────────────────────────────────────────────
   async function handleViewRankings() {
     try {
-      setStatus("Loading rankings...");
+      setStatus("Loading rankings…");
       const client = getClient();
       const tx = await client.get_leaderboard({ leaderboard_id: BigInt(viewId) });
       setRankings(tx.result as RankedEntry[]);
       setStatus("");
     } catch (e: any) {
-      setStatus(`❌ ${e.message}`);
+      setStatus(formatError(e));
     }
   }
 
@@ -198,7 +261,7 @@ export default function App() {
           </>
         ) : (
           <>
-            <p className="muted">Connect your Freighter wallet to get started.</p>
+            <p className="muted">Connect via Freighter, xBull, or LOBSTR.</p>
             <button className="btn-primary" onClick={handleConnect}>Connect Wallet</button>
           </>
         )}
@@ -207,34 +270,15 @@ export default function App() {
       {/* ── Send XLM ── */}
       <section className="card" id="send">
         <h2>💸 Send XLM</h2>
+        <input value={sendTo} onChange={e => setSendTo(e.target.value)} placeholder="Destination address (G...)" />
         <input
-          value={sendTo}
-          onChange={e => setSendTo(e.target.value)}
-          placeholder="Destination address (G...)"
+          type="number" value={sendAmount} onChange={e => setSendAmount(e.target.value)}
+          placeholder="Amount (XLM)" min="0.0000001" step="0.1"
         />
-        <input
-          type="number"
-          value={sendAmount}
-          onChange={e => setSendAmount(e.target.value)}
-          placeholder="Amount (XLM)"
-          min="0.0000001"
-          step="0.1"
-        />
-        <button className="btn-primary" onClick={handleSendXLM} disabled={!wallet}>
-          Send XLM
+        <button className="btn-primary" onClick={handleSendXLM} disabled={!wallet || sendTxStatus === "pending"}>
+          {sendTxStatus === "pending" ? "Sending…" : "Send XLM"}
         </button>
-        {txHash && (
-          <div className="tx-success">
-            ✅ Transaction sent!<br />
-            Hash: <a
-              href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="tx-link"
-            >{txHash.slice(0, 16)}...{txHash.slice(-8)}</a>
-          </div>
-        )}
-        {txError && <div className="tx-error">❌ {txError}</div>}
+        <TxBadge status={sendTxStatus} hash={sendTxHash} />
       </section>
 
       {/* ── Create Leaderboard ── */}
@@ -250,8 +294,13 @@ export default function App() {
           onChange={e => setMaxEntries(Number(e.target.value))}
           placeholder="Max entries"
         />
-        <button className="btn-primary" onClick={handleCreate} disabled={!wallet}>Create</button>
-        {createdId !== null && <p className="result">✅ Leaderboard ID: <strong>{createdId}</strong></p>}
+        <button className="btn-primary" onClick={handleCreate} disabled={!wallet || createTxStatus === "pending"}>
+          {createTxStatus === "pending" ? "Creating…" : "Create"}
+        </button>
+        <TxBadge status={createTxStatus} hash={createTxHash} />
+        {createdId !== null && createTxStatus === "success" && (
+          <p className="result">Leaderboard ID: <strong>{createdId}</strong></p>
+        )}
       </section>
 
       {/* ── Submit Score ── */}
@@ -267,7 +316,10 @@ export default function App() {
           onChange={e => setSubmitScore(Number(e.target.value))}
           placeholder="Your score"
         />
-        <button className="btn-primary" onClick={handleSubmitScore} disabled={!wallet}>Submit</button>
+        <button className="btn-primary" onClick={handleSubmitScore} disabled={!wallet || submitTxStatus === "pending"}>
+          {submitTxStatus === "pending" ? "Submitting…" : "Submit"}
+        </button>
+        <TxBadge status={submitTxStatus} hash={submitTxHash} />
       </section>
 
       {/* ── View Rankings ── */}
