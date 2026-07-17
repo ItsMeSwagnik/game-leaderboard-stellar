@@ -7,11 +7,14 @@ if (typeof window !== "undefined") {
     //@ts-ignore Buffer exists
     window.Buffer = window.Buffer || Buffer;
 }
+const _env = (typeof import.meta !== "undefined" && import.meta.env)
+    ? import.meta.env
+    : (typeof process !== "undefined" ? process.env : {});
 export const networks = {
     testnet: {
-        networkPassphrase: "Test SDF Network ; September 2015",
-        contractId: "CDPSYJQYFIVSVEWNGL47ZF5VEEDPMMVHPVLCQZKFTA3VTFKQDGJVELVA",
-    }
+        networkPassphrase: _env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015",
+        contractId: _env.VITE_CONTRACT_ID ?? "CDPSYJQYFIVSVEWNGL47ZF5VEEDPMMVHPVLCQZKFTA3VTFKQDGJVELVA",
+    },
 };
 export class Client extends ContractClient {
     options;

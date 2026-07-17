@@ -11,9 +11,5 @@
     "build": "npm run build --workspace=frontend/app",
     "preview": "npm run preview --workspace=frontend/app"
   },
-  "dependencies": {
-    "@creit.tech/stellar-wallets-kit": "^2.5.0",
-    "@stellar/freighter-api": "^6.0.1",
-    "@stellar/stellar-sdk": "^16.0.1"
-  }
+  "dependencies": {}
 }
