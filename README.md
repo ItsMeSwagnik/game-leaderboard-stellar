@@ -42,9 +42,13 @@ StellarRank is a Soroban smart contract that lets game developers and communitie
 ## 📂 Contract Structure
 
 ```
-contracts/hello-world/src/
+contracts/contract/src/
 ├── lib.rs       # Main contract logic
 └── test.rs      # Unit tests
+frontend/
+├── app/         # React + Vite frontend
+└── packages/
+    └── game_leaderboard/   # Auto-generated Stellar contract bindings
 ```
 
 ### Data Types
@@ -118,26 +122,81 @@ Returns a specific player's current rank and score.
 
 ---
 
-## 🚀 Build & Deploy
+## 🚀 Setup & Local Development
 
-**Prerequisites:** Rust, `wasm32v1-none` target, Stellar CLI
+### Prerequisites
+
+- [Rust](https://www.rust-lang.org/tools/install) + `wasm32v1-none` target
+- [Stellar CLI](https://developers.stellar.org/docs/tools/developer-tools/cli/install-cli)
+- [Node.js](https://nodejs.org/) v18+
 
 ```bash
-# Build
-stellar contract build
+# Install Rust wasm target
+rustup target add wasm32v1-none
+```
 
+### 1. Clone & Install
+
+```bash
+git clone <repo-url>
+cd "Game Leaderboard Stellar"
+npm install
+```
+
+### 2. Build the Smart Contract
+
+```bash
+cd contracts
+stellar contract build
+```
+
+Output: `contracts/target/wasm32v1-none/release/contract.wasm`
+
+### 3. Deploy to Testnet
+
+```bash
 # Generate & fund a testnet identity
 stellar keys generate swag --network testnet --fund
 
 # Deploy
 stellar contract deploy \
-  --wasm target/wasm32v1-none/release/hello_world.wasm \
+  --wasm contracts/target/wasm32v1-none/release/contract.wasm \
   --source-account swag \
   --network testnet \
   --alias game_leaderboard
 ```
 
-**Invoke example:**
+### 4. Generate Contract Bindings
+
+```bash
+stellar contract bindings typescript \
+  --contract-id game_leaderboard \
+  --network testnet \
+  --output-dir frontend/packages/game_leaderboard
+```
+
+### 5. Run the Frontend
+
+```bash
+# From project root
+npm run dev
+```
+
+App runs at `http://localhost:5173`
+
+---
+
+### Run Contract Tests
+
+```bash
+cd contracts
+cargo test
+```
+
+---
+
+### CLI Invoke Example
+
 ```bash
 stellar contract invoke \
   --id game_leaderboard \
@@ -161,12 +220,23 @@ stellar contract invoke \
 
 ---
 
+## 🔗 Transaction Hash (Contract Call)
+
+| Action | Transaction Hash |
+|---|---|
+| `submit_score` on testnet | *(run the app, submit a score, and paste the hash here from the tx badge)* |
+
+Verify any tx at: `https://stellar.expert/explorer/testnet/tx/1dc138055d32788b2f9fc34aba9f701d7a35c30eb1b2e4c88252052ad51f8967`
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Smart Contract:** Rust + Soroban SDK v22
 - **Blockchain:** Stellar Testnet
 - **CLI:** Stellar CLI
 - **Storage:** Soroban Persistent + Instance storage
+- **Multi-Wallet:** `@creit.tech/stellar-wallets-kit` v2 (Freighter, xBull, LOBSTR)
 
 ---
 
