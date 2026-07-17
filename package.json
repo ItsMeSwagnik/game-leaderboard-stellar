@@ -1,0 +1,18 @@
+{
+  "name": "stellar-rank-game-leaderboard",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend/app",
+    "frontend/packages/game_leaderboard"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=frontend/app",
+    "build": "npm run build --workspace=frontend/app",
+    "preview": "npm run preview --workspace=frontend/app"
+  },
+  "dependencies": {
+    "@stellar/freighter-api": "^6.0.1",
+    "@stellar/stellar-sdk": "^16.0.1"
+  }
+}
