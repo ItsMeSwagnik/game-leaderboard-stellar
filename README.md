@@ -1,5 +1,9 @@
 # 🏆 StellarRank — Permissionless Game Leaderboard on Stellar (Soroban)
 
+<img width="1917" height="1022" alt="image" src="https://github.com/user-attachments/assets/e0b3c77a-5f8a-4e34-bbfe-2970e2da790b" />
+
+<img width="1917" height="1025" alt="image" src="https://github.com/user-attachments/assets/e45c4d85-e14f-43fc-80ab-411cfd99258f" />
+
 <img width="1917" height="1016" alt="image" src="https://github.com/user-attachments/assets/fd85bc45-66e8-4f29-b317-0e7caa4c263a" />
 
 
