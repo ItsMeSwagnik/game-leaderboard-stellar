@@ -278,24 +278,24 @@ stellar contract invoke \
 
 ## 🎬 Demo Video
 
-<!-- Add your 1–2 minute demo video link here -->
-> 📹 *Demo video coming soon*
+https://drive.google.com/file/d/1Bkota-j0BBR5Rhwkw5Ek8OqYB66OJ9sr/view?usp=drive_link
 
 ---
 
 ## 📸 Screenshots
 
 ### Mobile Responsive UI
-<!-- Add mobile screenshot here -->
-> 📱 *Screenshot coming soon*
+
+<img width="378" height="846" alt="image" src="https://github.com/user-attachments/assets/75d9eb3a-c3ab-4030-8622-de8b088df491" /> <img width="377" height="842" alt="image" src="https://github.com/user-attachments/assets/1220a78b-319f-4296-ada1-aad21aca2e9f" />
 
 ### CI/CD Pipeline
-<!-- Add CI pipeline screenshot here -->
-> ⚙️ *Screenshot coming soon*
+
+<img width="1917" height="963" alt="image" src="https://github.com/user-attachments/assets/6f6a653a-9d3a-4471-8db7-74d7947a96d9" />
 
 ### Contract Tests Passing
-<!-- Add test output screenshot here -->
-> ✅ *Screenshot coming soon*
+
+<img width="1431" height="898" alt="image" src="https://github.com/user-attachments/assets/f755668c-d39b-4660-83de-1cd27a8f2697" />
+
 
 ---
 
