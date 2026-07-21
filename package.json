@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "frontend/app",
-    "frontend/packages/game_leaderboard"
+    "frontend",
+    "frontend/game_leaderboard"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=frontend/app",
-    "build": "npm run build --workspace=frontend/app",
-    "preview": "npm run preview --workspace=frontend/app"
+    "dev": "npm run dev --workspace=frontend --if-present",
+    "build": "npm run build --workspace=frontend --if-present",
+    "preview": "npm run preview --workspace=frontend --if-present"
   },
   "dependencies": {}
 }

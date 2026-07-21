@@ -17,7 +17,7 @@ export default defineConfig({
   server: {
     fs: {
       // Allow serving files from the workspace root node_modules
-      allow: [path.resolve(__dirname, "../../")],
+      allow: [path.resolve(__dirname, "../")],
     },
   },
   optimizeDeps: {

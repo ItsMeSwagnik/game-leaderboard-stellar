@@ -48,20 +48,76 @@ StellarRank is a Soroban smart contract that lets game developers and communitie
 
 ---
 
-## 📂 Contract Structure
+## 📂 Project Structure
 
 ```
 contracts/
 ├── contract/src/
-│   ├── lib.rs          # Main leaderboard contract
-│   └── test.rs         # Unit + inter-contract tests (11 tests)
+│   ├── lib.rs                          # Main leaderboard contract
+│   └── test.rs                         # Unit + inter-contract tests (11 tests)
 ├── reward_oracle/src/
-│   └── lib.rs          # RewardOracle contract (inter-contract target)
+│   └── lib.rs                          # RewardOracle contract (inter-contract target)
 frontend/
-├── app/                # React + Vite frontend
-└── packages/
-    └── game_leaderboard/   # Auto-generated Stellar contract bindings
+├── src/
+│   ├── wallet.ts                       # Wallet connection, signing, XLM balance
+│   ├── contract.ts                     # Soroban client factory wired to wallet signer
+│   ├── App.tsx                         # Full UI: connect wallet, create lb, submit score, rankings
+│   └── main.tsx                        # React entry point
+└── game_leaderboard/src/
+    └── index.ts                        # Auto-generated Stellar contract bindings
 ```
+
+---
+
+## 🔌 Wallet Integration
+
+**[`frontend/src/wallet.ts`](frontend/src/wallet.ts)** — initialises `@creit.tech/stellar-wallets-kit` with Freighter, xBull, and LOBSTR modules, exposes:
+
+```ts
+// Connect wallet — opens multi-wallet picker modal, returns public key
+export async function connectWallet(): Promise<string>
+
+// Disconnect wallet
+export async function disconnectWallet(): Promise<void>
+
+// Fetch native XLM balance via Horizon
+export async function fetchXLMBalance(address: string): Promise<string>
+
+// Sign a transaction XDR with the connected wallet
+export async function sign(xdr: string, address: string): Promise<{ signedTxXdr: string }>
+```
+
+**[`frontend/src/contract.ts`](frontend/src/contract.ts)** — wires the auto-generated Soroban client to the wallet signer:
+
+```ts
+import { Client, networks } from "@stellarrank/game_leaderboard";
+import { RPC_URL, NETWORK_PASSPHRASE, sign } from "./wallet";
+
+export function getClient(walletAddress?: string) {
+  return new Client({
+    ...networks.testnet,
+    rpcUrl: RPC_URL,
+    networkPassphrase: NETWORK_PASSPHRASE,
+    ...(walletAddress && {
+      publicKey: walletAddress,
+      signTransaction: (xdr: string) => sign(xdr, walletAddress),
+    }),
+  });
+}
+```
+
+---
+
+## 🔁 Frontend ↔ Contract Function Mapping
+
+Every function in `lib.rs` has a direct call in [`App.tsx`](frontend/src/App.tsx) via the generated client:
+
+| `lib.rs` function | Frontend call in `App.tsx` |
+|---|---|
+| `create_leaderboard(name, creator, scoring_type, max_entries)` | `client.create_leaderboard({ name, creator, scoring_type, max_entries })` |
+| `submit_score(leaderboard_id, player, score)` | `client.submit_score({ leaderboard_id, player, score })` |
+| `get_leaderboard(leaderboard_id)` | `client.get_leaderboard({ leaderboard_id })` |
+| `get_player_rank(leaderboard_id, player)` | `client.get_player_rank({ leaderboard_id, player })` |
 
 ### Data Types
 
